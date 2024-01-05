@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>2354af9f-4674-46b5-9a88-233a50d82442</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.0" />
+	<PackageReference Include="Microsoft.SemanticKernel" Version="1.0.1" />
+	<PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureAISearch" Version="1.0.1-alpha" />
+	<PackageReference Include="PdfPig" Version="0.1.9-alpha-20231119-4537e" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client\Client.csproj" />
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
+
+</Project>
