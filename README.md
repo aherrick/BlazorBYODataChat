@@ -19,3 +19,8 @@
   "AzureAISearch:IndexName": "contoso"
 }
 ```
+
+Ingest Support: 
+
+* .txt
+* .pdf
