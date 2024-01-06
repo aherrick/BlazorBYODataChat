@@ -1,15 +1,13 @@
 ﻿@page "/Ingest"
 @using System.Net.Http.Headers
-@using Microsoft.AspNetCore.SignalR.Client
 @using System.Text.Json
 @using Client.Models
 @using Shared
 
 @inject HttpClient Http
-@inject HubConnection HubConnection
 
-@implements IAsyncDisposable
-
+@* implements IAsyncDisposable
+ *@
 <PageTitle>Ingest</PageTitle>
 
 <h1>Ingest</h1>
@@ -50,19 +48,6 @@
     private List<File> files = new();
     bool showIngestMsg;
 
-    protected override async Task OnInitializedAsync()
-    { 
-        await HubConnection.StartAsync();
-
-            HubConnection.On<FileProgress>(nameof(IBYODataHub.AlertFileProcess), data =>
-        {
-            var file = files.ElementAt(data.FileUploadIndex);
-            file.PerecentProcessed = data.PercentProcessed;
-
-            StateHasChanged();
-        });  
-    }
-
     private async Task PurgeIndex()
     {
         var response = await Http.PostAsync("/chat/purgeindex", null);
@@ -85,6 +70,7 @@
         for (int i = 0; i < filesFromInput.Count; i++)
         {
             var fileToIngest = filesFromInput.ElementAt(i);
+            var file = files.ElementAt(i);
 
             var fileContent = new StreamContent(fileToIngest.OpenReadStream(maxFileSize));
             fileContent.Headers.ContentType = new MediaTypeHeaderValue(fileToIngest.ContentType);
@@ -94,21 +80,29 @@
             content.Add(fileContent, "File", fileToIngest.Name);
             content.Add(new StringContent(i.ToString()), "FileUploadIndex");
 
-            var response = await Http.PostAsync("/chat/ingestdata", content);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/chat/ingestdata");
+            request.Content = content;
+            request.SetBrowserResponseStreamingEnabled(true);
 
-            StateHasChanged();
+            using HttpResponseMessage response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            using Stream responseStream = await response.Content.ReadAsStreamAsync();
+
+
+            await foreach (var fileProgress in JsonSerializer.DeserializeAsyncEnumerable<FileChunkProgress>(
+                responseStream,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }))
+            {
+                file.PerecentProcessed = fileProgress.PercentProcessed;
+                StateHasChanged();
+            }
         }
 
         showIngestMsg = false;
 
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (HubConnection is not null)
-        {
-            await HubConnection.StopAsync(); 
-            // DisposeAsync causing errors? 
-        }
     }
 }

@@ -6,12 +6,7 @@ using System.Threading.Tasks;
 
 namespace Shared;
 
-public class FilePercent
+public class FileChunkProgress
 {
     public int PercentProcessed { get; set; }
-}
-
-public class FileProgress : FilePercent
-{
-    public int FileUploadIndex { get; set; }
 }

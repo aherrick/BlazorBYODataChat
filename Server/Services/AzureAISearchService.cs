@@ -10,7 +10,7 @@ public class AzureAISearchService(AzureAIMemoryService azureAIMemoryService, Con
     private const int MaxTokensPerParagraph = 960;
     private const int MaxTokensPerLine = 360;
 
-    public async IAsyncEnumerable<FilePercent> Save(AzureAISearchDto azureAISearchDto)
+    public async IAsyncEnumerable<FileChunkProgress> Save(AzureAISearchDto azureAISearchDto)
     {
         // rebuild new index with fresh data
 
@@ -35,7 +35,7 @@ public class AzureAISearchService(AzureAIMemoryService azureAIMemoryService, Con
                     id: azureAISearchDto.Id,
                     description: azureAISearchDto.Title);
 
-                yield return new FilePercent()
+                yield return new FileChunkProgress()
                 {
                     PercentProcessed = (int)Math.Round((i + 1) / (decimal)chunks.Count * 100)
                 };

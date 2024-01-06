@@ -1,8 +1,6 @@
 ﻿using Azure;
 using Azure.Search.Documents.Indexes;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using Server.Hubs;
 using Server.Models;
 using Server.Models.Dto;
 using Server.Services;
@@ -30,8 +28,7 @@ public static class Endpoints
         chatGrp.MapPost("/ingestdata", async ([FromForm] FileDataDto fileDto,
             [FromServices] AzureAIChatCompletionService azureAIChatCompletionService,
             [FromServices] AzureAIMemoryService azureAIMemoryService,
-            [FromServices] AzureAISearchService azureAISearchService,
-            IHubContext<BYODataHub, IBYODataHub> hubContext) =>
+            [FromServices] AzureAISearchService azureAISearchService) =>
         {
             await using var memoryStream = new MemoryStream();
             await fileDto.File.CopyToAsync(memoryStream);
@@ -60,17 +57,15 @@ public static class Endpoints
                 Title = Path.GetFileNameWithoutExtension(fileDto.File.FileName)
             };
 
-            await foreach (var file in azureAISearchService.Save(azureAISearchDto))
+            async IAsyncEnumerable<FileChunkProgress> StreamFileChunkProgress()
             {
-                await hubContext.Clients.All.AlertFileProcess(new FileProgress()
+                await foreach (var file in azureAISearchService.Save(azureAISearchDto))
                 {
-                    FileUploadIndex = int.Parse(fileDto.FileUploadIndex),
-                    PercentProcessed = file.PercentProcessed
-                });
+                    yield return file;
+                }
             }
+            return StreamFileChunkProgress();
         });
-
-        chatGrp.MapHub<BYODataHub>($"/byodatahub");
     }
 
     #endregion Chat

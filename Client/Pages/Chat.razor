@@ -1,7 +1,59 @@
 ﻿@page "/chat"
 
+@using System.Text.Json
+@using System.Web
+
+@inject IJSRuntime JsRuntime
+
 <PageTitle>Chat</PageTitle>
 
-<h1>Chat</h1>
+@* <table class="table">
+    <thead>
+        <tr>
+            <th>Author</th>
+            <th>Message</th>
+        </tr>
+    </thead>
+    <tbody>
+        @for (int i = 0; i < chats.Count; i++)
+        {
+            var chat = chats[i];
+            <tr>
+                <td>@chat.Author</td>
+                <td>
+
+                    @if (i == chats.Count - 1 && isQuerying)
+                    {
+                        <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+                    }
+
+                    <pre>
+                        @chat.Message
+                    </pre>
+
+                    @if (chat.Sources.Count > 0)
+                    {
+                        <p>
+                            @foreach (var source in chat.Sources)
+                            {
+                                <a href="@source.Url" target="_blank"> <small>@source.Title</small></a>
+                                <br />
+                            }
+                        </p>
+                    }
+                </td>
+            </tr>
+        }
+
+    </tbody>
+</table>
+
+<p>
+    <input @ref="queryInput" @bind="QueryVal" @bind:event="oninput" @onkeyup="Enter" placeholder="Enter your query..." style="width: 500px" />
+    <button class="btn btn-primary" @onclick="SubmitQuery" disabled="@ButtonDisabled">Submit</button>
+</p> *@
 
 
+@code {
+   
+}
