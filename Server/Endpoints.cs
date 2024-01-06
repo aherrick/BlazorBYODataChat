@@ -89,9 +89,9 @@ public static class Endpoints
 
         #endregion Clear
 
-        #region Get Cache
+        #region Cache
 
-        chatGrp.MapGet("/getcache", ([FromServices] ChatHistory chat) =>
+        chatGrp.MapGet("/cache", (ChatHistory chat) =>
         {
             var chatMsgs = new List<ChatMsgDto>();
 
@@ -129,21 +129,19 @@ public static class Endpoints
         chatGrp.MapPost("/stream", ChatStream);
 
         static async IAsyncEnumerable<ChatMsgDto> ChatStream(
-                                                [FromServices] AzureAIChatCompletionService azureAIChatCompletionService,
-                                                [FromServices] AzureAIMemoryService azureAIMemoryService,
-                                                [FromServices] ChatHistory chat,
-                                                [FromServices] Configuration.AzureAISearch azureAISearchConfig,
+                                                AzureAIChatCompletionService azureAIChatCompletionService,
+                                                AzureAIMemoryService azureAIMemoryService,
+                                                ChatHistory chat,
+                                                Configuration.AzureAISearch azureAISearchConfig,
                                                 [FromBody] ChatDto chatDto)
         {
-            const string ADD_INFO_MSG = "Here's some additional information: ";
-
-            var builder = new StringBuilder();
+            var additionalDataBuilder = new StringBuilder();
             var titleSourceList = new List<ChatMsgSource>();
 
             await foreach (var result in azureAIMemoryService.Instanace.SearchAsync(azureAISearchConfig.IndexName, chatDto.Query, limit: 5, minRelevanceScore: 0.5))
             {
                 // append additional info
-                builder.AppendLine(result.Metadata.Text);
+                additionalDataBuilder.AppendLine(result.Metadata.Text);
 
                 titleSourceList.Add(new ChatMsgSource()
 
@@ -153,17 +151,18 @@ public static class Endpoints
                 });
             }
 
-            builder.Insert(0, ADD_INFO_MSG);
+            const string ADD_INFO_MSG = "Here's some additional information: ";
+            additionalDataBuilder.Insert(0, ADD_INFO_MSG);
 
-            chat.AddUserMessage(builder.ToString());
+            chat.AddUserMessage(additionalDataBuilder.ToString());
             chat.AddUserMessage(chatDto.Query);
 
-            var resposneSb = new StringBuilder();
+            var chatResponseBuilder = new StringBuilder();
+            var chatCompService = azureAIChatCompletionService.Instanace.GetRequiredService<IChatCompletionService>();
 
-            await foreach (var response in azureAIChatCompletionService.Instanace.GetRequiredService<IChatCompletionService>()
-                                                                                                       .GetStreamingChatMessageContentsAsync(chat))
+            await foreach (var response in chatCompService.GetStreamingChatMessageContentsAsync(chat))
             {
-                resposneSb.Append(response.Content);
+                chatResponseBuilder.Append(response.Content);
 
                 yield return new ChatMsgDto()
                 {
@@ -173,7 +172,8 @@ public static class Endpoints
                 };
             }
 
-            chat.AddMessage(AuthorRole.Assistant, resposneSb.ToString(), metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
+            chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
+                metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
 
             // remove additional info block from chat history
             chat.Remove(chat.First(x => x.Content.StartsWith(ADD_INFO_MSG)));

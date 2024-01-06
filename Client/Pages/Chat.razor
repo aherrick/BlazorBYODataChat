@@ -74,24 +74,23 @@
     private List<ChatMsgDto> chats = new List<ChatMsgDto>();
     private bool isQuerying;
 
-
-    public async void Enter(KeyboardEventArgs e)
+    protected override async Task OnInitializedAsync()
     {
-        if ((e.Code == "Enter" || e.Code == "NumpadEnter") && QueryVal?.Trim().Length > 0)
-        {
-            await SubmitQuery();
-        }
-    }
-
-    private async Task GetChatCache()
-    {
-        var response = await Http.GetFromJsonAsync<List<ChatMsgDto>>("/chat/getcache");
+        var response = await Http.GetFromJsonAsync<List<ChatMsgDto>>("/chat/cache");
         if (response != null)
         {
             chats = new List<ChatMsgDto>();
             chats.AddRange(response);
 
             await ScrollBottom();
+        }
+    }
+
+    public async void Enter(KeyboardEventArgs e)
+    {
+        if ((e.Code == "Enter" || e.Code == "NumpadEnter") && QueryVal?.Trim().Length > 0)
+        {
+            await SubmitQuery();
         }
     }
 
@@ -119,7 +118,6 @@
         response.EnsureSuccessStatusCode();
 
         using Stream responseStream = await response.Content.ReadAsStreamAsync();
-
 
         await foreach (var chatResponse in JsonSerializer.DeserializeAsyncEnumerable<ChatMsgDto>(
             responseStream,
