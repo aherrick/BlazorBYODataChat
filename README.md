@@ -7,16 +7,20 @@
 
 ```
 {
-  "AzureOpenAI:DeploymentName": "...",
-  "AzureOpenAI:ModelName": "...",
-  "AzureOpenAI:Endpoint": "https://....openai.azure.com/",
-  "AzureOpenAI:Key": "...",
+  "AzureOpenAI": {
+    "DeploymentName": "...",
+    "ModelName": "...",
+    "Endpoint": "https://....openai.azure.com/",
+    "Key": "..."
+  },
 
-  "AzureAISearch:DeploymentName": "text-embedding-ada-002",
-  "AzureAISearch:ModelName": "text-embedding-ada-002",
-  "AzureAISearch:Endpoint": "https://....search.windows.net",
-  "AzureAISearch:Key": "...",
-  "AzureAISearch:IndexName": "contoso"
+  "AzureAISearch": {
+    "DeploymentName": "text-embedding-ada-002",
+    "ModelName": "text-embedding-ada-002",
+    "Endpoint": "https://....search.windows.net",
+    "Key": "...",
+    "IndexName": "contoso"
+  }
 }
 ```
 
