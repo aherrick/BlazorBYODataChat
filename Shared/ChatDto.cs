@@ -1,4 +1,4 @@
-﻿namespace Server.Models.Dto;
+﻿namespace Shared;
 
 public class ChatDto
 {

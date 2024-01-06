@@ -1,3 +1,4 @@
+using Microsoft.SemanticKernel.ChatCompletion;
 using Server;
 using Server.Helpers;
 using Server.Models;
@@ -17,6 +18,7 @@ builder.Services.AddSingleton(builder.Configuration.GetSection(nameof(Configurat
 builder.Services.AddSingleton<AzureAIChatCompletionService>();
 builder.Services.AddSingleton<AzureAIMemoryService>();
 builder.Services.AddSingleton<AzureAISearchService>();
+builder.Services.AddSingleton(new ChatHistory("You are an AI assistant that helps people find information. Use the additional information provided to answer the question. If you don't know based on the additional information, just say 'I don't know.'"));
 
 // Add services to the container.
 

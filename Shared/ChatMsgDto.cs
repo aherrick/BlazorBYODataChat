@@ -1,12 +1,10 @@
-﻿using Server.Models;
-
-namespace Server.Models.Dto;
+﻿namespace Shared;
 
 public class ChatMsgDto()
 {
     public string Message { get; set; }
 
-    public Enum Author { get; set; }
+    public ChatMsgAuthor Author { get; set; }
 
     public List<ChatMsgSource> Sources { get; set; } = [];
 }

@@ -2,12 +2,14 @@
 
 @using System.Text.Json
 @using System.Web
+@using Shared
 
 @inject IJSRuntime JsRuntime
+@inject HttpClient Http
 
 <PageTitle>Chat</PageTitle>
 
-@* <table class="table">
+ <table class="table">
     <thead>
         <tr>
             <th>Author</th>
@@ -51,9 +53,115 @@
 <p>
     <input @ref="queryInput" @bind="QueryVal" @bind:event="oninput" @onkeyup="Enter" placeholder="Enter your query..." style="width: 500px" />
     <button class="btn btn-primary" @onclick="SubmitQuery" disabled="@ButtonDisabled">Submit</button>
-</p> *@
+</p> 
 
 
 @code {
-   
+     ElementReference queryInput;
+
+    private bool ButtonDisabled = true;
+    private string _queryVal;
+    private string QueryVal
+    {
+        get { return this._queryVal; }
+        set
+        {
+            _queryVal = value;
+            ButtonDisabled = _queryVal?.Trim().Length == 0;
+        }
+    }
+
+    private List<ChatMsgDto> chats = new List<ChatMsgDto>();
+    private bool isQuerying;
+
+
+    public async void Enter(KeyboardEventArgs e)
+    {
+        if ((e.Code == "Enter" || e.Code == "NumpadEnter") && QueryVal?.Trim().Length > 0)
+        {
+            await SubmitQuery();
+        }
+    }
+
+    private async Task GetChatCache()
+    {
+        var response = await Http.GetFromJsonAsync<List<ChatMsgDto>>("/chat/getcache");
+        if (response != null)
+        {
+            chats = new List<ChatMsgDto>();
+            chats.AddRange(response);
+
+            await ScrollBottom();
+        }
+    }
+
+    private async Task SubmitQuery()
+    {
+        isQuerying = true;
+
+        chats.Add(new ChatMsgDto() { Message = QueryVal, Author = ChatMsgAuthor.user });
+
+        var chatAssistantResponse = new ChatMsgDto()
+            {
+                Author = ChatMsgAuthor.assistant
+            };
+        chats.Add(chatAssistantResponse);
+
+        var chatDto = new ChatDto {  Query = QueryVal };
+
+        ChatMsgDto chatMsgDto = null;
+        
+        HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/chat/stream");
+        request.Content = new StringContent(JsonSerializer.Serialize(chatDto), System.Text.Encoding.UTF8, "application/json");
+        request.SetBrowserResponseStreamingEnabled(true);
+
+        using HttpResponseMessage response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        using Stream responseStream = await response.Content.ReadAsStreamAsync();
+
+
+        await foreach (var chatResponse in JsonSerializer.DeserializeAsyncEnumerable<ChatMsgDto>(
+            responseStream,
+        new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        }))
+        {
+            if(chatResponse?.Message?.Length > 0)
+            {
+                isQuerying = false;
+            }
+
+            chatMsgDto = chatResponse;
+
+            chatAssistantResponse.Message += chatMsgDto.Message;
+
+            await ScrollBottom();
+        }
+
+        QueryVal = string.Empty;
+        await queryInput.FocusAsync();
+
+        chatAssistantResponse.Sources.AddRange(chatMsgDto.Sources);
+
+        await ScrollBottom();
+    }
+
+    private async Task ScrollBottom()
+    {
+        StateHasChanged();
+        await JsRuntime.InvokeVoidAsync("JsGoodness.ScrollBottom"); 
+    }
+
+    private async Task ClearChat()
+    {
+        var response = await Http.PostAsync("/chat/clear", null);
+        var responseStr = await response.Content.ReadAsStringAsync();
+
+        if (JsonSerializer.Deserialize<bool>(responseStr))
+        {
+            chats?.Clear();
+        }
+    }
 }
