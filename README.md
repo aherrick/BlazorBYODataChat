@@ -30,4 +30,4 @@ Ingest Support:
 * .pdf
 _assests
 
-![](https://github.com/aherrick/BlazorBYODataChat/_assests/demo.gif)
+![](https://github.com/aherrick/BlazorBYODataChat/blob/main/_assests/demo.gif)
