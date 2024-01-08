@@ -28,3 +28,6 @@ Ingest Support:
 
 * .txt
 * .pdf
+_assests
+
+![](https://github.com/aherrick/BlazorBYODataChat/_assests/demo.gif)
