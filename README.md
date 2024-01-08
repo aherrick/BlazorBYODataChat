@@ -30,6 +30,6 @@ Ingest Support:
 * .pdf
 _assests
 
-<img src="https://github.com/aherrick/BlazorBYODataChat/blob/main/_assests/demo.gif" width="50%" />
+<img src="https://github.com/aherrick/BlazorBYODataChat/blob/main/_assests/demo.gif" width="75%" />
 
 
