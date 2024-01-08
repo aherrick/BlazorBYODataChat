@@ -1,6 +1,7 @@
 ﻿using Azure;
 using Azure.Search.Documents.Indexes;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Server.Models;
 using Server.Models.Dto;
@@ -122,7 +123,7 @@ public static class Endpoints
             return chatMsgs;
         });
 
-        #endregion Get Cache
+        #endregion Cache
 
         #region Stream
 
@@ -151,13 +152,43 @@ public static class Endpoints
                 });
             }
 
+            var chatResponseBuilder = new StringBuilder();
+
+            /*
+            var actionContext = new KernelArguments()
+            {
+                ["$context"] = string.Join("\n", additionalDataBuilder.ToString()),
+                ["$query"] = chatDto.Query
+            };
+
+            //if we have a Q / A only start adding history
+            if (chat.Count > 1)
+            {
+                actionContext["$chat_history"] = string.Join("\n", chat.Select(x => x.Role + ": " + x.Content));
+            }
+
+            var pluginChat = azureAIChatCompletionService.Plugins.GetFunction("chat", "answer");
+
+            await foreach (var response in pluginChat.InvokeStreamingAsync(azureAIChatCompletionService, actionContext))
+            {
+                var responseStr = response.ToString();
+                chatResponseBuilder.Append(responseStr);
+
+                yield return new ChatMsgDto()
+                {
+                    Message = responseStr,
+                    Sources = titleSourceList,
+                    Author = ChatMsgAuthor.assistant
+                };
+            }
+            */
+
             const string ADD_INFO_MSG = "Here's some additional information: ";
             additionalDataBuilder.Insert(0, ADD_INFO_MSG);
 
             chat.AddUserMessage(additionalDataBuilder.ToString());
             chat.AddUserMessage(chatDto.Query);
 
-            var chatResponseBuilder = new StringBuilder();
             var chatCompService = azureAIChatCompletionService.Instanace.GetRequiredService<IChatCompletionService>();
 
             await foreach (var response in chatCompService.GetStreamingChatMessageContentsAsync(chat))
@@ -172,11 +203,11 @@ public static class Endpoints
                 };
             }
 
-            chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
-                metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
-
             // remove additional info block from chat history
             chat.Remove(chat.First(x => x.Content.StartsWith(ADD_INFO_MSG)));
+
+            chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
+                metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
         }
 
         #endregion Stream
