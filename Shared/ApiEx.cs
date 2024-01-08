@@ -1,4 +1,4 @@
-﻿namespace Server.Models;
+﻿namespace Shared;
 
 public class ApiEx
 {

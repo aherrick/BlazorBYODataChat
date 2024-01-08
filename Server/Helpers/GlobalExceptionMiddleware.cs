@@ -1,4 +1,4 @@
-﻿using Server.Models;
+﻿using Shared;
 using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
@@ -27,6 +27,10 @@ public class GlobalExceptionMiddleware(RequestDelegate next)
 
         switch (exception)
         {
+            case UnsupportedMediaTypeException:
+                context.Response.StatusCode = (int)HttpStatusCode.UnsupportedMediaType;
+                break;
+
             case ApplicationException ex:
                 if (ex.Message.Contains("Invalid Token"))
                 {

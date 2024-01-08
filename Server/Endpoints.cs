@@ -1,8 +1,8 @@
 ﻿using Azure;
 using Azure.Search.Documents.Indexes;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Server.Helpers;
 using Server.Models;
 using Server.Models.Dto;
 using Server.Services;
@@ -27,7 +27,9 @@ public static class Endpoints
         chatGrp.MapPost("/purgeindex", async (Configuration.AzureAISearch azureAISearch) =>
         {
             var indexClient = new SearchIndexClient(new Uri(azureAISearch.Endpoint), new AzureKeyCredential(azureAISearch.Key));
-            await indexClient.DeleteIndexAsync(azureAISearch.IndexName);
+            var resp = await indexClient.DeleteIndexAsync(azureAISearch.IndexName);
+
+            return resp.IsError;
         });
 
         #endregion Purge Index
@@ -35,9 +37,9 @@ public static class Endpoints
         #region Ingest Data
 
         chatGrp.MapPost("/ingestdata", async ([FromForm] FileDataDto fileDto,
-            [FromServices] AzureAIChatCompletionService azureAIChatCompletionService,
-            [FromServices] AzureAIMemoryService azureAIMemoryService,
-            [FromServices] AzureAISearchService azureAISearchService) =>
+            AzureAIChatCompletionService azureAIChatCompletionService,
+            AzureAIMemoryService azureAIMemoryService,
+            AzureAISearchService azureAISearchService) =>
         {
             await using var memoryStream = new MemoryStream();
             await fileDto.File.CopyToAsync(memoryStream);
@@ -45,7 +47,7 @@ public static class Endpoints
 
             var text = new StringBuilder();
 
-            if (fileDto.File.ContentType.Contains("txt"))
+            if (fileDto.File.ContentType.Contains("text"))
             {
                 text.Append(Encoding.UTF8.GetString(fileBytes));
             }
@@ -58,18 +60,33 @@ public static class Endpoints
                     text.Append(ContentOrderTextExtractor.GetText(page));
                 }
             }
+            else
+            {
+                throw new UnsupportedMediaTypeException();
+            }
+
+            var body = text.ToString().Trim();
 
             var azureAISearchDto = new AzureAISearchDto(Title: Path.GetFileNameWithoutExtension(fileDto.File.FileName),
-                                                        Body: text.ToString(),
-                                                        Id: Guid.NewGuid().ToString());
+                                             Body: body,
+                                             Id: Guid.NewGuid().ToString());
 
             async IAsyncEnumerable<FileChunkProgress> StreamFileChunkProgress()
             {
-                await foreach (var file in azureAISearchService.Save(azureAISearchDto))
+                if (!string.IsNullOrEmpty(azureAISearchDto.Body))
                 {
-                    yield return file;
+                    await foreach (var fileChunkProgress in azureAISearchService.Save(azureAISearchDto))
+                    {
+                        yield return fileChunkProgress;
+                    }
+                }
+                else
+                {
+                    // for now if no body, just write 100 // TODO: figure out how to handle empty text
+                    yield return new FileChunkProgress() { PercentProcessed = 100 };
                 }
             }
+
             return StreamFileChunkProgress();
         });
 
@@ -77,7 +94,7 @@ public static class Endpoints
 
         #region Clear
 
-        chatGrp.MapPost("/clear", ([FromServices] ChatHistory chat) =>
+        chatGrp.MapPost("/clear", (ChatHistory chat) =>
         {
             // remove all except first which is the system prompt
             if (chat.Count > 1)

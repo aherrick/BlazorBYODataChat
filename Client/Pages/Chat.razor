@@ -3,9 +3,10 @@
 @using System.Text.Json
 @using System.Web
 @using Shared
+@using Client.Helpers
 
 @inject IJSRuntime JsRuntime
-@inject HttpClient Http
+@inject CustomHttpClient CustomHttpClient
 
 <PageTitle>Chat</PageTitle>
 
@@ -57,7 +58,7 @@
 
 
 @code {
-     ElementReference queryInput;
+    ElementReference queryInput;
 
     private bool ButtonDisabled = true;
     private string _queryVal;
@@ -76,7 +77,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var response = await Http.GetFromJsonAsync<List<ChatMsgDto>>("/chat/cache");
+        var response = await CustomHttpClient.Get<List<ChatMsgDto>>("/chat/cache");
         if (response != null)
         {
             chats = new List<ChatMsgDto>();
@@ -109,34 +110,21 @@
         var chatDto = new ChatDto {  Query = QueryVal };
 
         ChatMsgDto chatMsgDto = null;
-        
-        HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/chat/stream");
-        request.Content = new StringContent(JsonSerializer.Serialize(chatDto), System.Text.Encoding.UTF8, "application/json");
-        request.SetBrowserResponseStreamingEnabled(true);
+        var httpContent = new StringContent(JsonSerializer.Serialize(chatDto), System.Text.Encoding.UTF8, "application/json");
 
-        using HttpResponseMessage response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        response.EnsureSuccessStatusCode();
-
-        using Stream responseStream = await response.Content.ReadAsStreamAsync();
-
-        await foreach (var chatResponse in JsonSerializer.DeserializeAsyncEnumerable<ChatMsgDto>(
-            responseStream,
-        new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        }))
-        {
-            if(chatResponse?.Message?.Length > 0)
+        await foreach (var chatResponse in CustomHttpClient.PostStream<ChatMsgDto>("/chat/stream", httpContent))
             {
-                isQuerying = false;
+                if(chatResponse?.Message?.Length > 0)
+                {
+                    isQuerying = false;
+                }
+
+                chatMsgDto = chatResponse;
+
+                chatAssistantResponse.Message += chatMsgDto.Message;
+
+                await ScrollBottom();
             }
-
-            chatMsgDto = chatResponse;
-
-            chatAssistantResponse.Message += chatMsgDto.Message;
-
-            await ScrollBottom();
-        }
 
         QueryVal = string.Empty;
         await queryInput.FocusAsync();
@@ -154,10 +142,8 @@
 
     private async Task ClearChat()
     {
-        var response = await Http.PostAsync("/chat/clear", null);
-        var responseStr = await response.Content.ReadAsStringAsync();
-
-        if (JsonSerializer.Deserialize<bool>(responseStr))
+        var response = await CustomHttpClient.Post<bool>("/chat/clear", null);
+        if (response)
         {
             chats?.Clear();
         }

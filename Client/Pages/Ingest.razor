@@ -2,9 +2,11 @@
 @using System.Net.Http.Headers
 @using System.Text.Json
 @using Client.Models
+@using Client.Helpers
 @using Shared
 
-@inject HttpClient Http
+@inject CustomHttpClient CustomHttpClient
+@inject CustomSweetAlertService CustomSweetAlertService
 
 <PageTitle>Ingest</PageTitle>
 
@@ -19,16 +21,16 @@
     <InputFile OnChange="@OnInputFileChange" multiple accept=".txt,.pdf" />
 </p>
 
-@if (showIngestMsg)
-{
-    <small>Please wait while ingesting files...</small>
-    <br />
-    <br />
-}
-
 @if (files.Count > 0)
 {
-  
+    if (filesProcessed < files.Count)
+    {
+        <small>Please wait while ingesting files...</small>
+        <small>@filesProcessed/@files.Count</small>
+        <br />
+        <br />
+    }
+
     @foreach (var file in files)
     {
         <div class="card">
@@ -44,17 +46,20 @@
 
 @code {
     private List<File> files = new();
-    bool showIngestMsg;
+    int filesProcessed = 0;
 
     private async Task PurgeIndex()
     {
-        var response = await Http.PostAsync("/chat/purgeindex", null);
+        var responseSuccess = await CustomHttpClient.Post<bool>("/chat/purgeindex", null);
+        if (responseSuccess)
+        {
+            await CustomSweetAlertService.Success("Purged Index");
+        }
     }
 
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
     {
         files.Clear();
-        showIngestMsg = true;
         long maxFileSize = 1024 * 1024 * 15; // 15 MB
 
         var filesFromInput = e.GetMultipleFiles(int.MaxValue);
@@ -76,30 +81,14 @@
             using var content = new MultipartFormDataContent();
 
             content.Add(fileContent, "File", fileToIngest.Name);
-            content.Add(new StringContent(i.ToString()), "FileUploadIndex");
 
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/chat/ingestdata");
-            request.Content = content;
-            request.SetBrowserResponseStreamingEnabled(true);
-
-            using HttpResponseMessage response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
-
-            using Stream responseStream = await response.Content.ReadAsStreamAsync();
-
-
-            await foreach (var fileProgress in JsonSerializer.DeserializeAsyncEnumerable<FileChunkProgress>(
-                responseStream,
-            new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            }))
+            await foreach (var fileProgress in CustomHttpClient.PostStream<FileChunkProgress>("/chat/ingestdata", content))
             {
                 file.PerecentProcessed = fileProgress.PercentProcessed;
                 StateHasChanged();
             }
-        }
 
-        showIngestMsg = false;
+            filesProcessed++;
+        }
     }
 }
