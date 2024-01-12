@@ -7,10 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.1" />
 	<PackageReference Include="Microsoft.SemanticKernel" Version="1.0.1" />
 	<PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureAISearch" Version="1.0.1-alpha" />
-	<PackageReference Include="PdfPig" Version="0.1.9-alpha-20240108-18144" />
+	<PackageReference Include="PdfPig" Version="0.1.9-alpha-20240112-83519" />
   </ItemGroup>
 
   <ItemGroup>

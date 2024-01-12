@@ -29,7 +29,7 @@ public class AzureAISearchService(AzureAIMemoryService azureAIMemoryService, Con
                 // TODO: "Reference" didn't seem to same off all fields, need to revist
                 // await azureAIMemoryService.Instanace.SaveReferenceAsync
 
-                await azureAIMemoryService.Instanace.SaveInformationAsync(
+                _ = await azureAIMemoryService.Instanace.SaveInformationAsync(
                     collection: azureAISearchConfig.IndexName,
                     text: chunks[i],
                     id: azureAISearchDto.Id,
@@ -40,7 +40,7 @@ public class AzureAISearchService(AzureAIMemoryService azureAIMemoryService, Con
                     PercentProcessed = (int)Math.Round((i + 1) / (decimal)chunks.Count * 100)
                 };
 
-                await Task.Delay(200); // rate limit
+                await Task.Delay(150); // rate limit
             }
         }
     }

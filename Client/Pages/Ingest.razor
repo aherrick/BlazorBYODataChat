@@ -50,10 +50,14 @@
 
     private async Task PurgeIndex()
     {
-        var responseSuccess = await CustomHttpClient.Post<bool>("/chat/purgeindex", null);
-        if (responseSuccess)
+        var responseError = await CustomHttpClient.Post<bool>("/chat/purgeindex", null);
+        if (!responseError)
         {
             await CustomSweetAlertService.Success("Purged Index");
+        }
+        else
+        {
+            await CustomSweetAlertService.Error("Validate Index in Azure AI Search portal.");
         }
     }
 

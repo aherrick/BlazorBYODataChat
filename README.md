@@ -9,7 +9,6 @@
 {
   "AzureOpenAI": {
     "DeploymentName": "...",
-    "ModelName": "...",
     "Endpoint": "https://....openai.azure.com/",
     "Key": "..."
   },

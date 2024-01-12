@@ -8,6 +8,7 @@ using Server.Models.Dto;
 using Server.Services;
 using Shared;
 using System.Collections.ObjectModel;
+using System.Net.Mime;
 using System.Text;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
@@ -24,7 +25,7 @@ public static class Endpoints
 
         #region Purge Index
 
-        chatGrp.MapPost("/purgeindex", async (Configuration.AzureAISearch azureAISearch) =>
+        _ = chatGrp.MapPost("/purgeindex", async (Configuration.AzureAISearch azureAISearch) =>
         {
             var indexClient = new SearchIndexClient(new Uri(azureAISearch.Endpoint), new AzureKeyCredential(azureAISearch.Key));
             var resp = await indexClient.DeleteIndexAsync(azureAISearch.IndexName);
@@ -47,22 +48,26 @@ public static class Endpoints
 
             var text = new StringBuilder();
 
-            if (fileDto.File.ContentType.Contains("text"))
+            switch (fileDto.File.ContentType)
             {
-                text.Append(Encoding.UTF8.GetString(fileBytes));
-            }
-            else if (fileDto.File.ContentType.Contains("pdf"))
-            {
-                using PdfDocument document = PdfDocument.Open(fileBytes);
+                case MediaTypeNames.Text.Plain:
+                    text.Append(Encoding.UTF8.GetString(fileBytes));
+                    break;
 
-                foreach (UglyToad.PdfPig.Content.Page page in document.GetPages())
-                {
-                    text.Append(ContentOrderTextExtractor.GetText(page));
-                }
-            }
-            else
-            {
-                throw new UnsupportedMediaTypeException();
+                case MediaTypeNames.Application.Pdf:
+                    {
+                        using PdfDocument document = PdfDocument.Open(fileBytes);
+
+                        foreach (UglyToad.PdfPig.Content.Page page in document.GetPages())
+                        {
+                            text.Append(ContentOrderTextExtractor.GetText(page));
+                        }
+
+                        break;
+                    }
+
+                default:
+                    throw new UnsupportedMediaTypeException();
             }
 
             var body = text.ToString().Trim();
@@ -158,6 +163,8 @@ public static class Endpoints
 
             await foreach (var result in azureAIMemoryService.Instanace.SearchAsync(azureAISearchConfig.IndexName, chatDto.Query, limit: 5, minRelevanceScore: 0.5))
             {
+                var yo = result.Metadata.Id;
+
                 // append additional info
                 additionalDataBuilder.AppendLine(result.Metadata.Text);
 
