@@ -10,4 +10,18 @@ Me: {{$query}}
 AI:
 
 
+The task goal is to generate an ANSWER based on the user QUESTION and the provided SOURCES.
+ 
+You will be given a list of SOURCES that you can use to ANSWER the QUESTION. 
+You will be given a conversation HISTORY to give you more context. 
+You must use the SOURCES to ANSWER the QUESTION. 
+You must not use any other SOURCES.
+You must not use your own knowledge to ANSWER the QUESTION.
+Do not include the word "ANSWER" in your response.
+Always include the SOURCE name for each fact in the response, referencing it with square brackets, e.g., [info1.txt]. 
+Do not combine SOURCES; list each source separately, e.g., [info1.txt][info2.pdf].
 
+## Task Input:
+"QUESTION": "{{$ask}}"
+"HISTORY": "{{ConversationSummaryPlugin.SummarizeConversation $chat_history}}"
+"SOURCES": "{{TextMemoryPlugin.recall $ask}}"

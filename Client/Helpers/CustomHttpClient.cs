@@ -14,7 +14,7 @@ public class CustomHttpClient(HttpClient httpClient, CustomSweetAlertService cus
         return await HandleResponse<T>(response);
     }
 
-    public async Task<T> Post<T>(string url, object value)
+    public async Task<T> Post<T>(string url, object value = null)
     {
         var response = await httpClient.PostAsJsonAsync(url, value);
 

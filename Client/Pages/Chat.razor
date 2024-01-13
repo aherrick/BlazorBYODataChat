@@ -11,10 +11,10 @@
 <PageTitle>Chat</PageTitle>
 
 <p>
-       @if (chats?.Count > 0)
-        {
-            <button class="btn btn-secondary" @onclick="ClearChat">Clear Chat</button>
-        }
+    @if (chats.Count > 0)
+    {
+        <button class="btn btn-secondary" @onclick="ClearChat">Clear Chat</button>
+    }
 </p>
 
  <table class="table">
@@ -149,10 +149,10 @@
 
     private async Task ClearChat()
     {
-        var response = await CustomHttpClient.Post<bool>("/chat/clear", null);
+        var response = await CustomHttpClient.Post<bool>("/chat/clear");
         if (response)
         {
-            chats?.Clear();
+            chats.Clear();
         }
     }
 }

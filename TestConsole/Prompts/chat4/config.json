@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "type": "completion",
+  "description": "Based on the user ask, conversation history, search the memory for sources and answer the user.",
+  "execution_settings": {
+    "default": {
+      "max_tokens": 2000,
+      "temperature": 0.7,
+      "top_p": 0.0,
+      "presence_penalty": 0.0,
+      "frequency_penalty": 0.0
+    }
+  },
+  "input_variables": [
+    {
+      "name": "request",
+      "description": "The user's request.",
+      "required": true
+    },
+    {
+      "name": "history",
+      "description": "The history of the conversation.",
+      "required": true
+    },
+    {
+      "name": "context",
+      "description": "The context of the conversation.",
+      "required": true
+    }
+  ]
+}

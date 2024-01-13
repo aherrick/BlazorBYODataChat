@@ -1,0 +1,25 @@
+## Task Goal
+The task goal is to generate an ANSWER based on the user QUESTION and the provided SOURCES.
+ 
+## Task instructions
+ 
+You will be given CONTEXT that you can use to ANSWER the QUESTION. 
+You will be given a conversation HISTORY to give you more context. 
+You must use the SOURCES to ANSWER the QUESTION. 
+You must not use any other SOURCES.
+You must not use your own knowledge to ANSWER the QUESTION. 
+If you do not know based on the HISTORY or CONTEXT respond "I don't know."
+Do not include the word "ANSWER" in your response.
+
+## Task Input:
+"REQUEST": "{{$request}}"
+"HISTORY": "{{$history}}"
+"CONTEXT": "{{$context}}"
+ 
+## Task Output:
+
+
+
+
+
+
