@@ -10,6 +10,13 @@
 
 <PageTitle>Chat</PageTitle>
 
+<p>
+       @if (chats?.Count > 0)
+        {
+            <button class="btn btn-secondary" @onclick="ClearChat">Clear Chat</button>
+        }
+</p>
+
  <table class="table">
     <thead>
         <tr>

@@ -16,7 +16,6 @@ builder.Services.AddSweetAlert2(options =>
 builder.Services.AddScoped<CustomSweetAlertService>();
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress), Timeout = TimeSpan.FromMinutes(5) });
-
 builder.Services.AddScoped<CustomHttpClient>();
 
 await builder.Build().RunAsync();

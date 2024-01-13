@@ -22,4 +22,26 @@ public class CustomSweetAlertService(SweetAlertService sweetAlertService)
               icon
           );
     }
+
+    public async Task Confirm(string title, string msg, Action yesAction, Action noAction = null)
+    {
+        var result = await sweetAlertService.FireAsync(new SweetAlertOptions
+        {
+            Title = title,
+            Text = msg,
+            Icon = SweetAlertIcon.Warning,
+            ShowCancelButton = true,
+            ConfirmButtonText = "Yes",
+            CancelButtonText = "Cancel"
+        });
+
+        if (!string.IsNullOrEmpty(result.Value))
+        {
+            yesAction();
+        }
+        else if (result.Dismiss == DismissReason.Cancel && noAction != null)
+        {
+            noAction();
+        }
+    }
 }

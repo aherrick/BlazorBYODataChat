@@ -7,13 +7,23 @@
 
 @inject CustomHttpClient CustomHttpClient
 @inject CustomSweetAlertService CustomSweetAlertService
+@inject NavigationManager NavManager
+
+@implements IDisposable
 
 <PageTitle>Ingest</PageTitle>
 
 <h1>Ingest</h1>
 
 <p>
-    <button type="button" class="btn btn-danger" @onclick=PurgeIndex>Purge Index</button>
+    <button type="button" class="btn btn-danger" @onclick=PurgeIndex disabled="@isPurgeIndex">
+        @if(isPurgeIndex)
+        {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        }
+        Purge Index
+    </button>
+
 </p>
 
 <p>
@@ -23,7 +33,7 @@
 
 @if (files.Count > 0)
 {
-    if (filesProcessed < files.Count)
+    if (IsProcessing)
     {
         <small>Please wait while ingesting files...</small>
         <small>@filesProcessed/@files.Count</small>
@@ -45,12 +55,48 @@
 }
 
 @code {
-    private List<File> files = new();
+
+    List<File> files = new();
     int filesProcessed = 0;
+    IDisposable regLocationChangeHandler;
+    bool isPurgeIndex; 
+
+    bool IsProcessing => filesProcessed < files.Count;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            regLocationChangeHandler = NavManager.RegisterLocationChangingHandler(LocationChangingHandler);
+        }
+    }
+
+    private async ValueTask LocationChangingHandler(LocationChangingContext arg)
+    {
+        if (IsProcessing)
+        {
+            await CustomSweetAlertService.Confirm("Are you sure you want to leave?", "Files are ingesting!", 
+                    yesAction: () =>
+                    {
+                        // let Yes fall through
+                    }, 
+                    noAction: () =>{
+
+                        // if no prevent nav
+                        arg.PreventNavigation();
+                    });         
+        }    
+    }
 
     private async Task PurgeIndex()
     {
+        isPurgeIndex = true; 
+
         var responseError = await CustomHttpClient.Post<bool>("/chat/purgeindex", null);
+
+        isPurgeIndex = false;
+        StateHasChanged();
+
         if (!responseError)
         {
             await CustomSweetAlertService.Success("Purged Index");
@@ -94,5 +140,10 @@
 
             filesProcessed++;
         }
+    }
+
+    public void Dispose()
+    {
+        regLocationChangeHandler?.Dispose();
     }
 }

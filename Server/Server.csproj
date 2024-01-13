@@ -19,12 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Update="Plugins\chat\answer\config.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="Plugins\chat\answer\skprompt.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

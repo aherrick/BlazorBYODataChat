@@ -25,7 +25,7 @@ public static class Endpoints
 
         #region Purge Index
 
-        _ = chatGrp.MapPost("/purgeindex", async (Configuration.AzureAISearch azureAISearch) =>
+        chatGrp.MapPost("/purgeindex", async (Configuration.AzureAISearch azureAISearch) =>
         {
             var indexClient = new SearchIndexClient(new Uri(azureAISearch.Endpoint), new AzureKeyCredential(azureAISearch.Key));
             var resp = await indexClient.DeleteIndexAsync(azureAISearch.IndexName);
@@ -178,7 +178,9 @@ public static class Endpoints
 
             var chatResponseBuilder = new StringBuilder();
 
+            // start Plugin
             /*
+
             var actionContext = new KernelArguments()
             {
                 ["$context"] = string.Join("\n", additionalDataBuilder.ToString()),
@@ -188,12 +190,12 @@ public static class Endpoints
             //if we have a Q / A only start adding history
             if (chat.Count > 1)
             {
-                actionContext["$chat_history"] = string.Join("\n", chat.Select(x => x.Role + ": " + x.Content));
+                actionContext["$chat_history"] = string.Join("\n", chat.Skip(1).Select(x => x.Role + ": " + x.Content));
             }
 
-            var pluginChat = azureAIChatCompletionService.Plugins.GetFunction("chat", "answer");
+            var pluginChat = azureAIChatCompletionService.Instanace.Plugins.GetFunction("chat", "answer");
 
-            await foreach (var response in pluginChat.InvokeStreamingAsync(azureAIChatCompletionService, actionContext))
+            await foreach (var response in pluginChat.InvokeStreamingAsync(azureAIChatCompletionService.Instanace, actionContext))
             {
                 var responseStr = response.ToString();
                 chatResponseBuilder.Append(responseStr);
@@ -206,6 +208,10 @@ public static class Endpoints
                 };
             }
             */
+
+            // end Plugin
+
+            // start IChatCompletionService
 
             const string ADD_INFO_MSG = "Here's some additional information: ";
             additionalDataBuilder.Insert(0, ADD_INFO_MSG);
@@ -229,6 +235,8 @@ public static class Endpoints
 
             // remove additional info block from chat history
             chat.Remove(chat.First(x => x.Content.StartsWith(ADD_INFO_MSG)));
+
+            // end IChatCompletionService
 
             chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
                 metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
