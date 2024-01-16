@@ -8,9 +8,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.1" />
-	<PackageReference Include="Microsoft.SemanticKernel" Version="1.0.1" />
-	<PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureAISearch" Version="1.0.1-alpha" />
-	<PackageReference Include="PdfPig" Version="0.1.9-alpha-20240112-83519" />
+	<PackageReference Include="Microsoft.SemanticKernel" Version="1.1.0" />
+	<PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureAISearch" Version="1.1.0-alpha" />
+	<PackageReference Include="PdfPig" Version="0.1.9-alpha-20240116-4e63e" />
   </ItemGroup>
 
   <ItemGroup>
