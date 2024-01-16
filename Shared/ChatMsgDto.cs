@@ -14,4 +14,5 @@ public class ChatMsgSource
     public string Title { get; set; }
 
     public string Url { get; set; }
+    public object Content { get; set; }
 }

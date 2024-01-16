@@ -5,11 +5,13 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Server.Helpers;
 using Server.Models;
 using Server.Models.Dto;
+using Server.Models.Sk;
 using Server.Services;
 using Shared;
 using System.Collections.ObjectModel;
 using System.Net.Mime;
 using System.Text;
+using System.Text.Json;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
@@ -156,10 +158,55 @@ public static class Endpoints
                                                 AzureAIMemoryService azureAIMemoryService,
                                                 ChatHistory chat,
                                                 Configuration.AzureAISearch azureAISearchConfig,
+                                                AzureAIChatCompletionWithDataService azureAIChatCompletionWithDataService,
                                                 [FromBody] ChatDto chatDto)
         {
-            var additionalDataBuilder = new StringBuilder();
+            var chatResponseBuilder = new StringBuilder();
             var titleSourceList = new List<ChatMsgSource>();
+
+            chat.AddUserMessage(chatDto.Query);
+            var citationRetrieved = false;
+
+            await foreach (var response in azureAIChatCompletionWithDataService.Instanace.GetStreamingChatMessageContentsAsync(chat))
+            {
+                if (!citationRetrieved)
+                {
+                    citationRetrieved = true;
+
+                    var skInnerContentJson = JsonSerializer.Serialize(response.InnerContent);
+                    var skInnerConent = JsonSerializer.Deserialize<SkResponseInnerContent.Rootobject>(skInnerContentJson);
+                    var citationsContent = JsonSerializer.Deserialize<SkCitation.Rootobject>(skInnerConent.messages.First().delta.content);
+
+                    for (int i = 0; i < citationsContent.citations.Length; i++)
+                    {
+                        var citation = citationsContent.citations[i];
+
+                        titleSourceList.Add(new ChatMsgSource()
+                        {
+                            Title = $"doc[{i + 1}]",
+                            Url = Guid.NewGuid().ToString() // for now
+                        });
+                    }
+                }
+
+                chatResponseBuilder.Append(response.Content);
+
+                yield return new ChatMsgDto()
+                {
+                    Message = response.Content,
+                    Sources = titleSourceList,
+                    Author = ChatMsgAuthor.assistant
+                };
+            }
+
+            chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
+         metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
+
+            ////////////////////////
+            ///
+
+            /*
+            var additionalDataBuilder = new StringBuilder();
 
             await foreach (var result in azureAIMemoryService.Instanace.SearchAsync(azureAISearchConfig.IndexName, chatDto.Query, limit: 5, minRelevanceScore: 0.5))
             {
@@ -176,7 +223,7 @@ public static class Endpoints
                 });
             }
 
-            var chatResponseBuilder = new StringBuilder();
+            */
 
             // start Plugin
             /*
@@ -213,33 +260,37 @@ public static class Endpoints
 
             // start IChatCompletionService
 
-            const string ADD_INFO_MSG = "Here's some additional information: ";
-            additionalDataBuilder.Insert(0, ADD_INFO_MSG);
+            /*
 
-            chat.AddUserMessage(additionalDataBuilder.ToString());
-            chat.AddUserMessage(chatDto.Query);
+             const string ADD_INFO_MSG = "Here's some additional information: ";
+             additionalDataBuilder.Insert(0, ADD_INFO_MSG);
 
-            var chatCompService = azureAIChatCompletionService.Instanace.GetRequiredService<IChatCompletionService>();
+             chat.AddUserMessage(additionalDataBuilder.ToString());
+             chat.AddUserMessage(chatDto.Query);
 
-            await foreach (var response in chatCompService.GetStreamingChatMessageContentsAsync(chat))
-            {
-                chatResponseBuilder.Append(response.Content);
+             var chatCompService = azureAIChatCompletionService.Instanace.GetRequiredService<IChatCompletionService>();
 
-                yield return new ChatMsgDto()
-                {
-                    Message = response.Content,
-                    Sources = titleSourceList,
-                    Author = ChatMsgAuthor.assistant
-                };
-            }
+             await foreach (var response in chatCompService.GetStreamingChatMessageContentsAsync(chat))
+             {
+                 chatResponseBuilder.Append(response.Content);
 
-            // remove additional info block from chat history
-            chat.Remove(chat.First(x => x.Content.StartsWith(ADD_INFO_MSG)));
+                 yield return new ChatMsgDto()
+                 {
+                     Message = response.Content,
+                     Sources = titleSourceList,
+                     Author = ChatMsgAuthor.assistant
+                 };
+             }
 
-            // end IChatCompletionService
+             // remove additional info block from chat history
+             chat.Remove(chat.First(x => x.Content.StartsWith(ADD_INFO_MSG)));
 
-            chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
-                metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
+             // end IChatCompletionService
+
+             chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
+                 metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
+
+             */
         }
 
         #endregion Stream
