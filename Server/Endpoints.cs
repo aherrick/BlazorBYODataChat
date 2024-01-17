@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.Json;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using Xceed.Words.NET;
 
 namespace Server;
 
@@ -46,24 +47,32 @@ public static class Endpoints
         {
             await using var memoryStream = new MemoryStream();
             await fileDto.File.CopyToAsync(memoryStream);
-            var fileBytes = memoryStream.ToArray();
 
             var text = new StringBuilder();
 
             switch (fileDto.File.ContentType)
             {
                 case MediaTypeNames.Text.Plain:
-                    text.Append(Encoding.UTF8.GetString(fileBytes));
-                    break;
+                    {
+                        text.Append(Encoding.UTF8.GetString(memoryStream.ToArray()));
 
+                        break;
+                    }
                 case MediaTypeNames.Application.Pdf:
                     {
-                        using PdfDocument document = PdfDocument.Open(fileBytes);
+                        using PdfDocument document = PdfDocument.Open(memoryStream.ToArray());
 
                         foreach (UglyToad.PdfPig.Content.Page page in document.GetPages())
                         {
                             text.Append(ContentOrderTextExtractor.GetText(page));
                         }
+
+                        break;
+                    }
+                case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                    {
+                        using DocX doc = DocX.Load(memoryStream);
+                        text.Append(doc.Text);
 
                         break;
                     }
@@ -151,15 +160,12 @@ public static class Endpoints
 
         #region Stream
 
-        chatGrp.MapPost("/stream", ChatStream);
+        chatGrp.MapPost("/StreamDataService", ChatStreamWithData);
 
-        static async IAsyncEnumerable<ChatMsgDto> ChatStream(
-                                                AzureAIChatCompletionService azureAIChatCompletionService,
-                                                AzureAIMemoryService azureAIMemoryService,
-                                                ChatHistory chat,
-                                                Configuration.AzureAISearch azureAISearchConfig,
-                                                AzureAIChatCompletionWithDataService azureAIChatCompletionWithDataService,
-                                                [FromBody] ChatDto chatDto)
+        static async IAsyncEnumerable<ChatMsgDto> ChatStreamWithData(
+                                             ChatHistory chat,
+                                             AzureAIChatCompletionWithDataService azureAIChatCompletionWithDataService,
+                                             [FromBody] ChatDto chatDto)
         {
             var chatResponseBuilder = new StringBuilder();
             var titleSourceList = new List<ChatMsgSource>();
@@ -171,6 +177,7 @@ public static class Endpoints
             {
                 if (!citationRetrieved)
                 {
+                    // TODO: this needs to be cleaned up
                     citationRetrieved = true;
 
                     var skInnerContentJson = JsonSerializer.Serialize(response.InnerContent);
@@ -201,12 +208,19 @@ public static class Endpoints
 
             chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
          metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
+        }
 
-            ////////////////////////
-            ///
+        chatGrp.MapPost("/StreamMemorySearch", ChatStreamMemorySearch);
 
-            /*
+        static async IAsyncEnumerable<ChatMsgDto> ChatStreamMemorySearch(
+                                          AzureAIChatCompletionService azureAIChatCompletionService,
+                                          AzureAIMemoryService azureAIMemoryService,
+                                          ChatHistory chat,
+                                          Configuration.AzureAISearch azureAISearchConfig,
+                                          [FromBody] ChatDto chatDto)
+        {
             var additionalDataBuilder = new StringBuilder();
+            var titleSourceList = new List<ChatMsgSource>();
 
             await foreach (var result in azureAIMemoryService.Instanace.SearchAsync(azureAISearchConfig.IndexName, chatDto.Query, limit: 5, minRelevanceScore: 0.5))
             {
@@ -223,74 +237,33 @@ public static class Endpoints
                 });
             }
 
-            */
+            var chatResponseBuilder = new StringBuilder();
 
-            // start Plugin
-            /*
+            const string ADD_INFO_MSG = "Here's some additional information: ";
+            additionalDataBuilder.Insert(0, ADD_INFO_MSG);
 
-            var actionContext = new KernelArguments()
+            chat.AddUserMessage(additionalDataBuilder.ToString());
+            chat.AddUserMessage(chatDto.Query);
+
+            var chatCompService = azureAIChatCompletionService.Instanace.GetRequiredService<IChatCompletionService>();
+
+            await foreach (var response in chatCompService.GetStreamingChatMessageContentsAsync(chat))
             {
-                ["$context"] = string.Join("\n", additionalDataBuilder.ToString()),
-                ["$query"] = chatDto.Query
-            };
-
-            //if we have a Q / A only start adding history
-            if (chat.Count > 1)
-            {
-                actionContext["$chat_history"] = string.Join("\n", chat.Skip(1).Select(x => x.Role + ": " + x.Content));
-            }
-
-            var pluginChat = azureAIChatCompletionService.Instanace.Plugins.GetFunction("chat", "answer");
-
-            await foreach (var response in pluginChat.InvokeStreamingAsync(azureAIChatCompletionService.Instanace, actionContext))
-            {
-                var responseStr = response.ToString();
-                chatResponseBuilder.Append(responseStr);
+                chatResponseBuilder.Append(response.Content);
 
                 yield return new ChatMsgDto()
                 {
-                    Message = responseStr,
+                    Message = response.Content,
                     Sources = titleSourceList,
                     Author = ChatMsgAuthor.assistant
                 };
             }
-            */
 
-            // end Plugin
+            // remove additional info block from chat history
+            chat.Remove(chat.First(x => x.Content.StartsWith(ADD_INFO_MSG)));
 
-            // start IChatCompletionService
-
-            /*
-
-             const string ADD_INFO_MSG = "Here's some additional information: ";
-             additionalDataBuilder.Insert(0, ADD_INFO_MSG);
-
-             chat.AddUserMessage(additionalDataBuilder.ToString());
-             chat.AddUserMessage(chatDto.Query);
-
-             var chatCompService = azureAIChatCompletionService.Instanace.GetRequiredService<IChatCompletionService>();
-
-             await foreach (var response in chatCompService.GetStreamingChatMessageContentsAsync(chat))
-             {
-                 chatResponseBuilder.Append(response.Content);
-
-                 yield return new ChatMsgDto()
-                 {
-                     Message = response.Content,
-                     Sources = titleSourceList,
-                     Author = ChatMsgAuthor.assistant
-                 };
-             }
-
-             // remove additional info block from chat history
-             chat.Remove(chat.First(x => x.Content.StartsWith(ADD_INFO_MSG)));
-
-             // end IChatCompletionService
-
-             chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
-                 metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
-
-             */
+            chat.AddMessage(AuthorRole.Assistant, chatResponseBuilder.ToString(),
+                metadata: new ReadOnlyDictionary<string, object>(titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)));
         }
 
         #endregion Stream

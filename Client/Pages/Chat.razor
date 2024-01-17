@@ -119,7 +119,7 @@
         ChatMsgDto chatMsgDto = null;
         var httpContent = new StringContent(JsonSerializer.Serialize(chatDto), System.Text.Encoding.UTF8, "application/json");
 
-        await foreach (var chatResponse in CustomHttpClient.PostStream<ChatMsgDto>("/chat/stream", httpContent))
+        await foreach (var chatResponse in CustomHttpClient.PostStream<ChatMsgDto>("/chat/StreamDataService", httpContent))
             {
                 if(chatResponse?.Message?.Length > 0)
                 {

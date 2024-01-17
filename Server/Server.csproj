@@ -7,10 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="DocX" Version="2.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.1" />
 	<PackageReference Include="Microsoft.SemanticKernel" Version="1.1.0" />
 	<PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureAISearch" Version="1.1.0-alpha" />
-	<PackageReference Include="PdfPig" Version="0.1.9-alpha-20240116-4e63e" />
+	<PackageReference Include="PdfPig" Version="0.1.9-alpha-20240117-096eb" />
   </ItemGroup>
 
   <ItemGroup>

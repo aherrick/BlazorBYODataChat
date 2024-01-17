@@ -27,6 +27,7 @@ Ingest Support:
 
 * .txt
 * .pdf
+* .docx
 
 <img src="https://github.com/aherrick/BlazorBYODataChat/blob/main/_assests/demo.gif" width="85%" />
 

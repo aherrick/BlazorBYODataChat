@@ -34,7 +34,8 @@ var memory = new MemoryBuilder()
 #pragma warning restore SKEXP0011 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
 #pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-var chatCompletionWithData = new AzureOpenAIChatCompletionWithDataService(new AzureOpenAIChatCompletionWithDataConfig
+
+var chatCompWithDataConfig = new AzureOpenAIChatCompletionWithDataConfig
 {
     CompletionModelId = azureOpenAIConfig.DeploymentName,
     CompletionEndpoint = azureOpenAIConfig.Endpoint,
@@ -42,16 +43,38 @@ var chatCompletionWithData = new AzureOpenAIChatCompletionWithDataService(new Az
     DataSourceApiKey = azureAISearchConfig.Key,
     DataSourceEndpoint = azureAISearchConfig.Endpoint,
     DataSourceIndex = azureAISearchConfig.IndexName
-});
+};
+
+var chatCompletionWithData = new AzureOpenAIChatCompletionWithDataService(chatCompWithDataConfig);
+
+Kernel kernelChatWData = Kernel.CreateBuilder()
+    .AddAzureOpenAIChatCompletion(config: chatCompWithDataConfig)
+    .Build();
+
 #pragma warning restore SKEXP0010
 
 #endregion Configuration
 
-// Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+var ask = "what is scc";
 
+///
+/// (1) chat w/ data
+///
+
+var function = kernelChatWData.CreateFunctionFromPrompt("Question: {{$input}}");
+
+await foreach (StreamingKernelContent response in kernelChatWData.InvokeStreamingAsync(function, new() { ["input"] = ask }))
+{
+    Console.Write(response.ToString());
+}
+
+///
+/// (2) chat w/ data
+///
+
+/*
 var chatHistory = new ChatHistory();
 
-var ask = "what is scc";
 chatHistory.AddUserMessage(ask);
 
 // Chat Completion example
@@ -64,6 +87,7 @@ Console.WriteLine(response);
 
 var toolResponse = JsonSerializer.Deserialize<RootobjectToolContent>(chatMessage.ToolContent);
 Console.WriteLine(JsonSerializer.Serialize(toolResponse, new JsonSerializerOptions { WriteIndented = true }));
+*/
 
 ///
 /// CHAT COMPLETION FUN
@@ -142,91 +166,6 @@ while (true)
 */
 
 Console.Read();
-
-//private static async Task ExampleWithChatCompletionAsync()
-//{
-//    Console.WriteLine("=== Example with Chat Completion ===");
-
-//    var chatCompletion = new AzureOpenAIChatCompletionWithDataService(GetCompletionWithDataConfig());
-//    var chatHistory = new ChatHistory();
-
-//    // First question without previous context based on uploaded content.
-//    var ask = "How did Emily and David meet?";
-//    chatHistory.AddUserMessage(ask);
-
-//    // Chat Completion example
-//    var chatMessage = (AzureOpenAIWithDataChatMessageContent)await chatCompletion.GetChatMessageContentAsync(chatHistory);
-
-//    var response = chatMessage.Content!;
-//    var toolResponse = chatMessage.ToolContent;
-
-//    // Output
-//    // Ask: How did Emily and David meet?
-//    // Response: Emily and David, both passionate scientists, met during a research expedition to Antarctica.
-//    Console.WriteLine($"Ask: {ask}");
-//    Console.WriteLine($"Response: {response}");
-//    Console.WriteLine();
-
-//    // Chat history maintenance
-//    if (!string.IsNullOrEmpty(toolResponse))
-//    {
-//        chatHistory.AddMessage(AuthorRole.Tool, toolResponse);
-//    }
-
-//    chatHistory.AddAssistantMessage(response);
-
-//    // Second question based on uploaded content.
-//    ask = "What are Emily and David studying?";
-//    chatHistory.AddUserMessage(ask);
-
-//    // Chat Completion Streaming example
-//    Console.WriteLine($"Ask: {ask}");
-//    Console.WriteLine("Response: ");
-
-//    await foreach (var word in chatCompletion.GetStreamingChatMessageContentsAsync(chatHistory))
-//    {
-//        Console.Write(word);
-//    }
-
-//    Console.WriteLine(Environment.NewLine);
-//}
-
-//private static async Task ExampleWithKernelAsync()
-//{
-//    Console.WriteLine("=== Example with Kernel ===");
-
-//    var ask = "How did Emily and David meet?";
-
-//    var completionWithDataConfig = GetCompletionWithDataConfig();
-
-//    Kernel kernel = Kernel.CreateBuilder()
-//        .AddAzureOpenAIChatCompletion(config: completionWithDataConfig)
-//        .Build();
-
-//    var function = kernel.CreateFunctionFromPrompt("Question: {{$input}}");
-
-//    // First question without previous context based on uploaded content.
-//    var response = await kernel.InvokeAsync(function, new() { ["input"] = ask });
-
-//    // Output
-//    // Ask: How did Emily and David meet?
-//    // Response: Emily and David, both passionate scientists, met during a research expedition to Antarctica.
-//    Console.WriteLine($"Ask: {ask}");
-//    Console.WriteLine($"Response: {response.GetValue<string>()}");
-//    Console.WriteLine();
-
-//    // Second question based on uploaded content.
-//    ask = "What are Emily and David studying?";
-//    response = await kernel.InvokeAsync(function, new() { ["input"] = ask });
-
-//    // Output
-//    // Ask: What are Emily and David studying?
-//    // Response: They are passionate scientists who study glaciology,
-//    // a branch of geology that deals with the study of ice and its effects.
-//    Console.WriteLine($"Ask: {ask}");
-//    Console.WriteLine($"Response: {response.GetValue<string>()}");
-//    Console.WriteLine();
-//}
 
 static async Task HandleChatCompletion(string userPrompt, AzureOpenAIChatCompletionService service, ChatHistory history)
 {
