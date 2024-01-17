@@ -7,11 +7,6 @@ using UglyToad.PdfPig;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSignalR(o =>
-{
-    o.EnableDetailedErrors = true;
-});
-
 builder.Services.AddSingleton(builder.Configuration.GetSection(nameof(Configuration.AzureOpenAI)).Get<Configuration.AzureOpenAI>());
 builder.Services.AddSingleton(builder.Configuration.GetSection(nameof(Configuration.AzureAISearch)).Get<Configuration.AzureAISearch>());
 
