@@ -2,6 +2,6 @@
 
 var chatHelper = new ChatHelper();
 
-await chatHelper.ExecuteChatCompletionFun();
+await chatHelper.ExecuteInMemoryKernel();
 
 Console.Read();

@@ -1,6 +1,6 @@
 ﻿namespace TestConsole.Models;
 
-public class SkToolContent
+public class SkCitation
 {
     // ToolContent
     public class Rootobject
