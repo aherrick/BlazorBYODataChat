@@ -17,7 +17,7 @@
     }
 </p>
 
- <table class="table">
+<table class="table">
     <thead>
         <tr>
             <th>Author</th>
@@ -39,7 +39,7 @@
 
                     <pre>
                         @chat.Message
-                    </pre>
+                            </pre>
 
                     @if (chat.Sources.Count > 0)
                     {
@@ -54,15 +54,13 @@
                 </td>
             </tr>
         }
-
     </tbody>
 </table>
 
 <p>
     <input @ref="queryInput" @bind="QueryVal" @bind:event="oninput" @onkeyup="Enter" placeholder="Enter your query..." style="width: 500px" />
     <button class="btn btn-primary" @onclick="SubmitQuery" disabled="@ButtonDisabled">Submit</button>
-</p> 
-
+</p>
 
 @code {
     ElementReference queryInput;
@@ -114,24 +112,24 @@
             };
         chats.Add(chatAssistantResponse);
 
-        var chatDto = new ChatDto {  Query = QueryVal };
+        var chatDto = new ChatDto { Query = QueryVal };
 
         ChatMsgDto chatMsgDto = null;
         var httpContent = new StringContent(JsonSerializer.Serialize(chatDto), System.Text.Encoding.UTF8, "application/json");
 
-        await foreach (var chatResponse in CustomHttpClient.PostStream<ChatMsgDto>("/chat/StreamDataService", httpContent))
+        await foreach (var chatResponse in CustomHttpClient.PostStream<ChatMsgDto>("/chat/StreamMemorySearch", httpContent))
+        {
+            if (chatResponse?.Message?.Length > 0)
             {
-                if(chatResponse?.Message?.Length > 0)
-                {
-                    isQuerying = false;
-                }
-
-                chatMsgDto = chatResponse;
-
-                chatAssistantResponse.Message += chatMsgDto.Message;
-
-                await ScrollBottom();
+                isQuerying = false;
             }
+
+            chatMsgDto = chatResponse;
+
+            chatAssistantResponse.Message += chatMsgDto.Message;
+
+            await ScrollBottom();
+        }
 
         QueryVal = string.Empty;
         await queryInput.FocusAsync();
@@ -144,7 +142,7 @@
     private async Task ScrollBottom()
     {
         StateHasChanged();
-        await JsRuntime.InvokeVoidAsync("JsGoodness.ScrollBottom"); 
+        await JsRuntime.InvokeVoidAsync("JsGoodness.ScrollBottom");
     }
 
     private async Task ClearChat()

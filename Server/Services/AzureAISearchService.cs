@@ -5,7 +5,12 @@ using Shared;
 
 namespace Server.Services;
 
-public class AzureAISearchService(AzureAIMemoryService azureAIMemoryService, Configuration.AzureAISearch azureAISearchConfig)
+#pragma warning disable SKEXP0050 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+public class AzureAISearchService(
+    AzureAIMemoryService azureAIMemoryService,
+    Configuration.AzureAISearch azureAISearchConfig
+)
 {
     private const int MaxTokensPerParagraph = 960;
     private const int MaxTokensPerLine = 360;
@@ -17,12 +22,8 @@ public class AzureAISearchService(AzureAIMemoryService azureAIMemoryService, Con
         if (!string.IsNullOrEmpty(azureAISearchDto.Body))
         {
             // https://github.com/Azure-Samples/miyagi/blob/f8e4bb3e50d60bac4baa5d49bf8b9c978547a5ec/services/recommendation-service/dotnet/Controllers/MemoryController.cs
-#pragma warning disable SKEXP0055 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             var lines = TextChunker.SplitPlainTextLines(azureAISearchDto.Body, MaxTokensPerLine);
-#pragma warning restore SKEXP0055 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-#pragma warning disable SKEXP0055 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             var chunks = TextChunker.SplitPlainTextParagraphs(lines, MaxTokensPerParagraph);
-#pragma warning restore SKEXP0055 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
             for (var i = 0; i < chunks.Count; i++)
             {
@@ -33,7 +34,8 @@ public class AzureAISearchService(AzureAIMemoryService azureAIMemoryService, Con
                     collection: azureAISearchConfig.IndexName,
                     text: chunks[i],
                     id: azureAISearchDto.Id,
-                    description: azureAISearchDto.Title);
+                    description: azureAISearchDto.Title
+                );
 
                 yield return new FileChunkProgress()
                 {
