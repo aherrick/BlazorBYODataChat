@@ -10,13 +10,6 @@
 
 <PageTitle>Chat</PageTitle>
 
-<p>
-    @if (chats.Count > 0)
-    {
-        <button class="btn btn-secondary" @onclick="ClearChat">Clear Chat</button>
-    }
-</p>
-
 <table class="table">
     <thead>
         <tr>
@@ -39,7 +32,7 @@
 
                     <pre>
                         @chat.Message
-                            </pre>
+                                                            </pre>
 
                     @if (chat.Sources.Count > 0)
                     {
@@ -79,18 +72,6 @@
 
     private List<ChatMsgDto> chats = new List<ChatMsgDto>();
     private bool isQuerying;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var response = await CustomHttpClient.Get<List<ChatMsgDto>>("/chat/cache");
-        if (response != null)
-        {
-            chats = new List<ChatMsgDto>();
-            chats.AddRange(response);
-
-            await ScrollBottom();
-        }
-    }
 
     public async void Enter(KeyboardEventArgs e)
     {
@@ -145,12 +126,4 @@
         await JsRuntime.InvokeVoidAsync("JsGoodness.ScrollBottom");
     }
 
-    private async Task ClearChat()
-    {
-        var response = await CustomHttpClient.Post<bool>("/chat/clear");
-        if (response)
-        {
-            chats.Clear();
-        }
-    }
 }

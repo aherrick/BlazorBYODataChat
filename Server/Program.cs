@@ -1,3 +1,4 @@
+using Azure.AI.OpenAI.Chat;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Server;
 using Server.Helpers;
@@ -9,8 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton(
     builder
-        .Configuration.GetSection(nameof(Configuration.AzureOpenAI))
-        .Get<Configuration.AzureOpenAI>()
+        .Configuration.GetSection(nameof(Configuration.AzureOpenAIChat))
+        .Get<Configuration.AzureOpenAIChat>()
 );
 
 builder.Services.AddSingleton(
@@ -27,22 +28,7 @@ builder.Services.AddSingleton(
 
 builder.Services.AddSingleton<AzureAIChatCompletionService>();
 builder.Services.AddSingleton<AzureAIMemoryService>();
-builder.Services.AddSingleton<AzureAISearchService>();
-
-builder.Services.AddSingleton(
-    new ChatHistory(
-    /*
-            """
-            You are an AI assistant that helps people find information.
-            You NEVER respond about topics other than provided additional information and context.
-            Your job is to answer  questions.
-            You try to be concise and only provide longer responses if necessary.
-            If someone asks a question about anything other than provided additional information and context,
-            you refuse to answer, and you instead ask if there's a topic related to the additional information and context you can assist with.
-            """
-    */
-    )
-);
+builder.Services.AddSingleton<AzureAIChatDataSourceService>();
 
 // Add services to the container.
 

@@ -1,28 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>2354af9f-4674-46b5-9a88-233a50d82442</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="DocX" Version="3.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.8" />
-	<PackageReference Include="Microsoft.SemanticKernel" Version="1.19.0" />
-	<PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureAISearch" Version="1.19.0-alpha" />
-	<PackageReference Include="PdfPig" Version="0.1.9-alpha-20240910-4845f" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0-rc.1.24452.1" />
+	  <PackageReference Include="Microsoft.KernelMemory.Core" Version="0.75.240924.1" />
+
+	  <PackageReference Include="PdfPig" Version="0.1.9-alpha-20240910-4845f" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Client\Client.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Plugins\chat\answer\skprompt.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 

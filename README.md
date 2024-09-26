@@ -7,18 +7,24 @@
 
 ```
 {
-  "AzureOpenAI": {
-    "DeploymentName": "...",
+  {
+  "AzureOpenAIChat": {
+    "DeploymentName": "gpt-4o",
+    "Endpoint": "https://....openai.azure.com/",
+    "Key": "..."
+  },
+
+  "AzureOpenAITextEmbedding": {
+    "DeploymentName": "text-embedding-ada-002",
     "Endpoint": "https://....openai.azure.com/",
     "Key": "..."
   },
 
   "AzureAISearch": {
-    "DeploymentName": "text-embedding-ada-002",
-    "ModelName": "text-embedding-ada-002",
-    "Endpoint": "https://....search.windows.net",
     "Key": "...",
-    "IndexName": "contoso"
+    "Endpoint": "https://....search.windows.net",
+    "IndexName": "MyIndex",
+    "InScope": true
   }
 }
 ```

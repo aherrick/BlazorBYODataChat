@@ -1,15 +1,11 @@
-﻿using System.Collections.ObjectModel;
-using System.Net.Mime;
+﻿using System.Net.Mime;
 using System.Text;
-using System.Text.Json;
-using Azure;
-using Azure.Search.Documents.Indexes;
+using Azure.AI.OpenAI;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.SemanticKernel.ChatCompletion;
+using OpenAI.Chat;
 using Server.Helpers;
 using Server.Models;
 using Server.Models.Dto;
-using Server.Models.Sk;
 using Server.Services;
 using Shared;
 using UglyToad.PdfPig;
@@ -30,15 +26,16 @@ public static class Endpoints
 
         chatGrp.MapPost(
             "/purgeindex",
-            async (Configuration.AzureAISearch azureAISearch) =>
+            async (
+                AzureAIMemoryService azureAIMemoryService,
+                Configuration.AzureAISearch azureAISearchConfig
+            ) =>
             {
-                var indexClient = new SearchIndexClient(
-                    new Uri(azureAISearch.Endpoint),
-                    new AzureKeyCredential(azureAISearch.Key)
+                await azureAIMemoryService.Instanace.DeleteIndexAsync(
+                    azureAISearchConfig.IndexName
                 );
-                var resp = await indexClient.DeleteIndexAsync(azureAISearch.IndexName);
 
-                return resp.IsError;
+                return true;
             }
         );
 
@@ -50,71 +47,63 @@ public static class Endpoints
             "/ingestdata",
             async (
                 [FromForm] FileDataDto fileDto,
-                AzureAIChatCompletionService azureAIChatCompletionService,
                 AzureAIMemoryService azureAIMemoryService,
-                AzureAISearchService azureAISearchService
+                Configuration.AzureAISearch azureAISearchConfig
             ) =>
             {
                 await using var memoryStream = new MemoryStream();
                 await fileDto.File.CopyToAsync(memoryStream);
 
-                var text = new StringBuilder();
+                //var text = new StringBuilder();
 
-                switch (fileDto.File.ContentType)
-                {
-                    case MediaTypeNames.Text.Plain:
-                        {
-                            text.Append(Encoding.UTF8.GetString(memoryStream.ToArray()));
+                //switch (fileDto.File.ContentType)
+                //{
+                //    case MediaTypeNames.Text.Plain:
+                //        {
+                //            text.Append(Encoding.UTF8.GetString(memoryStream.ToArray()));
 
-                            break;
-                        }
-                    case MediaTypeNames.Application.Pdf:
-                        {
-                            using PdfDocument document = PdfDocument.Open(memoryStream.ToArray());
+                //            break;
+                //        }
+                //    case MediaTypeNames.Application.Pdf:
+                //        {
+                //            using PdfDocument document = PdfDocument.Open(memoryStream.ToArray());
 
-                            foreach (UglyToad.PdfPig.Content.Page page in document.GetPages())
-                            {
-                                text.Append(ContentOrderTextExtractor.GetText(page));
-                            }
+                //            foreach (UglyToad.PdfPig.Content.Page page in document.GetPages())
+                //            {
+                //                text.Append(ContentOrderTextExtractor.GetText(page));
+                //            }
 
-                            break;
-                        }
-                    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                        {
-                            using DocX doc = DocX.Load(memoryStream);
-                            text.Append(doc.Text);
+                //            break;
+                //        }
+                //    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                //        {
+                //            using DocX doc = DocX.Load(memoryStream);
+                //            text.Append(doc.Text);
 
-                            break;
-                        }
+                //            break;
+                //        }
 
-                    default:
-                        throw new UnsupportedMediaTypeException();
-                }
+                //    default:
+                //        throw new UnsupportedMediaTypeException();
+                //}
 
-                var body = text.ToString().Trim();
+                //await azureAIMemoryService.Instanace.ImportTextAsync(
+                //    text: text.ToString().Trim(),
+                //    documentId: Guid.NewGuid().ToString(),
+                //    index: azureAISearchConfig.IndexName
+                //);
 
-                var azureAISearchDto = new AzureAISearchDto(
-                    Title: Path.GetFileNameWithoutExtension(fileDto.File.FileName),
-                    Body: body,
-                    Id: Guid.NewGuid().ToString()
+                await azureAIMemoryService.Instanace.ImportDocumentAsync(
+                    memoryStream,
+                    fileName: fileDto.File.FileName,
+                    index: azureAISearchConfig.IndexName
                 );
 
-                async IAsyncEnumerable<FileChunkProgress> StreamFileChunkProgress()
+                static async IAsyncEnumerable<FileChunkProgress> StreamFileChunkProgress()
                 {
-                    if (!string.IsNullOrEmpty(azureAISearchDto.Body))
-                    {
-                        await foreach (
-                            var fileChunkProgress in azureAISearchService.Save(azureAISearchDto)
-                        )
-                        {
-                            yield return fileChunkProgress;
-                        }
-                    }
-                    else
-                    {
-                        // for now if no body, just write 100 // TODO: figure out how to handle empty text
-                        yield return new FileChunkProgress() { PercentProcessed = 100 };
-                    }
+                    await Task.Yield(); // Make us async right away
+
+                    yield return new FileChunkProgress() { PercentProcessed = 100 };
                 }
 
                 return StreamFileChunkProgress();
@@ -123,138 +112,49 @@ public static class Endpoints
 
         #endregion Ingest Data
 
-        #region Clear
-
-        chatGrp.MapPost(
-            "/clear",
-            (ChatHistory chat) =>
-            {
-                // remove all except first which is the system prompt
-                if (chat.Count > 1)
-                {
-                    chat.RemoveRange(1, chat.Count - 1);
-                }
-
-                return true;
-            }
-        );
-
-        #endregion Clear
-
-        #region Cache
-
-        chatGrp.MapGet(
-            "/cache",
-            (ChatHistory chat) =>
-            {
-                var chatMsgs = new List<ChatMsgDto>();
-
-                // the first one is the AI's instructions so let's just skip it
-                foreach (var chatHistory in chat.Skip(1))
-                {
-                    var author = (ChatMsgAuthor)
-                        Enum.Parse(typeof(ChatMsgAuthor), chatHistory.Role.ToString());
-
-                    var msg = new ChatMsgDto() { Message = chatHistory.Content, Author = author };
-
-                    if (chatHistory.Metadata != null)
-                    {
-                        msg.Sources.AddRange(
-                            from m in chatHistory.Metadata
-                            select new ChatMsgSource
-                            {
-                                Title = m.Value.ToString(),
-                                Url = m.Key.ToString()
-                            }
-                        );
-                    }
-
-                    chatMsgs.Add(msg);
-                }
-
-                return chatMsgs;
-            }
-        );
-
-        #endregion Cache
-
         #region Stream
 
         chatGrp.MapPost("/StreamMemorySearch", ChatStreamMemorySearch);
 
         static async IAsyncEnumerable<ChatMsgDto> ChatStreamMemorySearch(
             AzureAIChatCompletionService azureAIChatCompletionService,
-            AzureAIMemoryService azureAIMemoryService,
-            ChatHistory chat,
-            Configuration.AzureAISearch azureAISearchConfig,
+            AzureAIChatDataSourceService azureAIChatDataSourceService,
             [FromBody] ChatDto chatDto
         )
         {
-            var additionalDataBuilder = new StringBuilder();
-            var titleSourceList = new List<ChatMsgSource>();
+            var chatUpdates = azureAIChatCompletionService.Instanace.CompleteChatStreamingAsync(
+                [new UserChatMessage(chatDto.Query)],
+                azureAIChatDataSourceService.Instanace
+            );
 
-            await foreach (
-                var result in azureAIMemoryService.Instanace.SearchAsync(
-                    azureAISearchConfig.IndexName,
-                    chatDto.Query,
-                    limit: 5,
-                    minRelevanceScore: 0.5
-                )
-            )
+            await foreach (var chatUpdate in chatUpdates)
             {
-                var yo = result.Metadata.Id;
+                var text = string.Join("", chatUpdate.ContentUpdate.Select(x => x.Text));
+                var citations = new List<ChatMsgSource>();
 
-                // append additional info
-                additionalDataBuilder.AppendLine(result.Metadata.Text);
+#pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                var context = chatUpdate.GetAzureMessageContext();
+#pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-                titleSourceList.Add(
-                    new ChatMsgSource()
-                    {
-                        Title = result.Metadata.Description,
-                        Url = result.Metadata.Id
-                    }
-                );
-            }
-
-            var chatResponseBuilder = new StringBuilder();
-
-            const string ADD_INFO_MSG = "Here's some additional information: ";
-            additionalDataBuilder.Insert(0, ADD_INFO_MSG);
-
-            chat.AddUserMessage(additionalDataBuilder.ToString());
-            chat.AddUserMessage(chatDto.Query);
-
-            var chatCompService =
-                azureAIChatCompletionService.Instanace.GetRequiredService<IChatCompletionService>();
-
-            await foreach (
-                var response in chatCompService.GetStreamingChatMessageContentsAsync(chat)
-            )
-            {
-                chatResponseBuilder.Append(response.Content);
+                if (context?.Citations != null)
+                {
+                    citations.AddRange(
+                        from s in context.Citations
+                        select new ChatMsgSource { Title = s.Title, Url = s.Url }
+                    );
+                }
 
                 yield return new ChatMsgDto()
                 {
-                    Message = response.Content,
-                    Sources = titleSourceList,
+                    Message = text,
+                    Sources = citations,
                     Author = ChatMsgAuthor.assistant
                 };
             }
-
-            // remove additional info block from chat history
-            chat.Remove(chat.First(x => x.Content.StartsWith(ADD_INFO_MSG)));
-
-            chat.AddMessage(
-                AuthorRole.Assistant,
-                chatResponseBuilder.ToString(),
-                metadata: new ReadOnlyDictionary<string, object>(
-                    titleSourceList.ToDictionary(k => k.Url, v => (object)v.Title)
-                )
-            );
         }
-
-        #endregion Stream
     }
+
+    #endregion Stream
 }
 
 #endregion Chat

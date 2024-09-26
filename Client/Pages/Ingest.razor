@@ -16,14 +16,10 @@
 <h1>Ingest</h1>
 
 <p>
-    <button type="button" class="btn btn-danger" @onclick=PurgeIndex disabled="@isPurgeIndex">
-        @if(isPurgeIndex)
-        {
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-        }
+    <button type="button" class="btn btn-danger" @onclick=PurgeIndex>
+
         Purge Index
     </button>
-
 </p>
 
 <p>
@@ -59,7 +55,6 @@
     List<File> files = new();
     int filesProcessed = 0;
     IDisposable regLocationChangeHandler;
-    bool isPurgeIndex; 
 
     bool IsProcessing => filesProcessed < files.Count;
 
@@ -75,36 +70,25 @@
     {
         if (IsProcessing)
         {
-            await CustomSweetAlertService.Confirm("Are you sure you want to leave?", "Files are ingesting!", 
+            await CustomSweetAlertService.Confirm("Are you sure you want to leave?", "Files are ingesting!",
                     yesAction: () =>
                     {
                         // let Yes fall through
-                    }, 
-                    noAction: () =>{
+                    },
+                    noAction: () =>
+                    {
 
                         // if no prevent nav
                         arg.PreventNavigation();
-                    });         
-        }    
+                    });
+        }
     }
 
     private async Task PurgeIndex()
     {
-        isPurgeIndex = true; 
+        await CustomHttpClient.Post<bool>("/chat/purgeindex", null);
 
-        var responseError = await CustomHttpClient.Post<bool>("/chat/purgeindex", null);
-
-        isPurgeIndex = false;
-        StateHasChanged();
-
-        if (!responseError)
-        {
-            await CustomSweetAlertService.Success("Purged Index");
-        }
-        else
-        {
-            await CustomSweetAlertService.Error("Validate Index in Azure AI Search portal.");
-        }
+        await CustomSweetAlertService.Success("Purged Index");
     }
 
     private async Task OnInputFileChange(InputFileChangeEventArgs e)
