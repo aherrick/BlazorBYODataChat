@@ -7,11 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DocX" Version="3.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0-rc.1.24452.1" />
-	  <PackageReference Include="Microsoft.KernelMemory.Core" Version="0.75.240924.1" />
-
-	  <PackageReference Include="PdfPig" Version="0.1.9-alpha-20240910-4845f" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0-rc.2.24474.3" />
+	  <PackageReference Include="Microsoft.KernelMemory" Version="0.91.241101.1" />
+	  <PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.28.0" />
   </ItemGroup>
 
   <ItemGroup>

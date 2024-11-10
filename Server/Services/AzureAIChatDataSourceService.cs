@@ -1,6 +1,4 @@
-﻿using Azure.AI.OpenAI;
-using Azure.AI.OpenAI.Chat;
-using Microsoft.KernelMemory;
+﻿using Azure.AI.OpenAI.Chat;
 using OpenAI.Chat;
 using Server.Models;
 

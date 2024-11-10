@@ -1,5 +1,3 @@
-using Azure.AI.OpenAI.Chat;
-using Microsoft.SemanticKernel.ChatCompletion;
 using Server;
 using Server.Helpers;
 using Server.Models;

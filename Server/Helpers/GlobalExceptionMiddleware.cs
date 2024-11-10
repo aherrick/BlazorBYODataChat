@@ -1,7 +1,7 @@
-﻿using Shared;
-using System.Net;
+﻿using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
+using Shared;
 
 namespace Server.Helpers;
 

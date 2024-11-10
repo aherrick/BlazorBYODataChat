@@ -1,16 +1,10 @@
-﻿using System.Net.Mime;
-using System.Text;
-using Azure.AI.OpenAI;
+﻿using Azure.AI.OpenAI.Chat;
 using Microsoft.AspNetCore.Mvc;
 using OpenAI.Chat;
-using Server.Helpers;
 using Server.Models;
 using Server.Models.Dto;
 using Server.Services;
 using Shared;
-using UglyToad.PdfPig;
-using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
-using Xceed.Words.NET;
 
 namespace Server;
 
@@ -54,45 +48,6 @@ public static class Endpoints
                 await using var memoryStream = new MemoryStream();
                 await fileDto.File.CopyToAsync(memoryStream);
 
-                //var text = new StringBuilder();
-
-                //switch (fileDto.File.ContentType)
-                //{
-                //    case MediaTypeNames.Text.Plain:
-                //        {
-                //            text.Append(Encoding.UTF8.GetString(memoryStream.ToArray()));
-
-                //            break;
-                //        }
-                //    case MediaTypeNames.Application.Pdf:
-                //        {
-                //            using PdfDocument document = PdfDocument.Open(memoryStream.ToArray());
-
-                //            foreach (UglyToad.PdfPig.Content.Page page in document.GetPages())
-                //            {
-                //                text.Append(ContentOrderTextExtractor.GetText(page));
-                //            }
-
-                //            break;
-                //        }
-                //    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                //        {
-                //            using DocX doc = DocX.Load(memoryStream);
-                //            text.Append(doc.Text);
-
-                //            break;
-                //        }
-
-                //    default:
-                //        throw new UnsupportedMediaTypeException();
-                //}
-
-                //await azureAIMemoryService.Instanace.ImportTextAsync(
-                //    text: text.ToString().Trim(),
-                //    documentId: Guid.NewGuid().ToString(),
-                //    index: azureAISearchConfig.IndexName
-                //);
-
                 await azureAIMemoryService.Instanace.ImportDocumentAsync(
                     memoryStream,
                     fileName: fileDto.File.FileName,
@@ -133,14 +88,14 @@ public static class Endpoints
                 var citations = new List<ChatMsgSource>();
 
 #pragma warning disable AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                var context = chatUpdate.GetAzureMessageContext();
+                var context = chatUpdate.GetMessageContext();
 #pragma warning restore AOAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
                 if (context?.Citations != null)
                 {
                     citations.AddRange(
                         from s in context.Citations
-                        select new ChatMsgSource { Title = s.Title, Url = s.Url }
+                        select new ChatMsgSource { Title = s?.Title, Url = s.Uri?.ToString() }
                     );
                 }
 
