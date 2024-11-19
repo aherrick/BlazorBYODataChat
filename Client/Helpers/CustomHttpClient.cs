@@ -68,8 +68,8 @@ public class CustomHttpClient(HttpClient httpClient, CustomSweetAlertService cus
 
     private async Task ShowExceptionAlert(HttpResponseMessage response)
     {
-        var responseEx = await response.Content.ReadFromJsonAsync<ApiEx>();
+        var data = await response.Content.ReadAsStringAsync();
 
-        await customSweetAlertService.Error(responseEx.Message);
+        await customSweetAlertService.Error(data);
     }
 }
