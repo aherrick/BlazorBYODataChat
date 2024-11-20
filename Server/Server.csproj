@@ -8,8 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0" />
-	  <PackageReference Include="Microsoft.KernelMemory" Version="0.92.241112.1" />
-	  <PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.29.0" />
+	  <PackageReference Include="Microsoft.KernelMemory" Version="0.93.241118.1" />
+	  <PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.30.0" />
   </ItemGroup>
 
   <ItemGroup>

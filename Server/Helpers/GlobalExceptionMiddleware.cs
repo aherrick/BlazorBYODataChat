@@ -23,38 +23,34 @@ public class GlobalExceptionMiddleware(RequestDelegate next)
     {
         context.Response.ContentType = MediaTypeNames.Application.Json;
 
-        var apiEx = new ApiEx();
-
-        switch (exception)
+        var apiEx = new ApiEx
         {
-            case UnsupportedMediaTypeException:
-                context.Response.StatusCode = (int)HttpStatusCode.UnsupportedMediaType;
-                break;
+            Message = exception.Message,
+            StatusCode = GetStatusCode(exception)
+        };
 
-            case ApplicationException ex:
-                if (ex.Message.Contains("Invalid Token"))
-                {
-                    context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                    break;
-                }
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                break;
-
-            case UnauthorizedAccessException:
-                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                break;
-
-            case NotImplementedException:
-                context.Response.StatusCode = (int)HttpStatusCode.NotImplemented;
-                break;
-
-            default:
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                break;
+        if (Enum.IsDefined(typeof(HttpStatusCode), apiEx.StatusCode))
+        {
+            apiEx.StatusPhrase = ((HttpStatusCode)apiEx.StatusCode).ToString();
         }
 
-        apiEx.Message = exception.Message;
+        context.Response.StatusCode = apiEx.StatusCode;
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(apiEx));
+        var response = JsonSerializer.Serialize(apiEx, new JsonSerializerOptions { WriteIndented = true });
+        await context.Response.WriteAsync(response);
     }
+
+    private static int GetStatusCode(Exception exception) => exception switch
+    {
+        UnsupportedMediaTypeException => (int)HttpStatusCode.UnsupportedMediaType,
+        ApplicationException ex when ex.Message.Contains("Invalid Token") => (int)HttpStatusCode.Forbidden,
+        ApplicationException => (int)HttpStatusCode.BadRequest,
+        UnauthorizedAccessException => (int)HttpStatusCode.Unauthorized,
+        NotImplementedException => (int)HttpStatusCode.NotImplemented,
+        TimeoutException => (int)HttpStatusCode.RequestTimeout,
+        InvalidOperationException => (int)HttpStatusCode.Conflict,
+        AccessViolationException => (int)HttpStatusCode.Forbidden,
+        HttpRequestException => (int)HttpStatusCode.BadGateway,
+        _ => (int)HttpStatusCode.InternalServerError
+    };
 }
