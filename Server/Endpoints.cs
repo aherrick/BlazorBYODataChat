@@ -1,11 +1,14 @@
 ﻿using Azure.AI.OpenAI.Chat;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Azure;
+using Microsoft.KernelMemory;
 using OpenAI.Chat;
 using Server.Models;
 using Server.Models.Dto;
 using Server.Services;
 using Shared;
+using System.Text.RegularExpressions;
 
 namespace Server;
 
@@ -36,6 +39,21 @@ public static class Endpoints
 
         #endregion Purge Index
 
+        chatGrp.MapGet(
+           "/getdocuments",
+           async (
+             AzureAIMemoryService azureAIMemoryService,
+             Configuration.AzureAISearch azureAISearchConfig
+           ) =>
+           {
+               var docs = await azureAIMemoryService.Instanace.SearchAsync("*", azureAISearchConfig.IndexName, limit: 10000);
+
+               docs.Results.Reverse();
+
+               return docs.Results.Select(x => x.SourceName).ToList();
+           }
+       );
+
         #region Ingest Data
 
         chatGrp.MapPost(
@@ -49,8 +67,11 @@ public static class Endpoints
                 await using var memoryStream = new MemoryStream();
                 await fileDto.File.CopyToAsync(memoryStream);
 
+                //var docId = string.Concat(Regex.Matches(fileDto.File.FileName, @"[A-Za-z0-9]"));
+
                 await azureAIMemoryService.Instanace.ImportDocumentAsync(
                     memoryStream,
+                    documentId: Guid.NewGuid().ToString(),
                     fileName: fileDto.File.FileName,
                     index: azureAISearchConfig.IndexName
                 );

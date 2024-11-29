@@ -50,8 +50,15 @@
     }
 }
 
-@code {
+@foreach (var doc in documents)
+{
+    <div class="card">
+        @doc
+    </div>
+}
 
+@code {
+    List<string> documents = new();
     List<File> files = new();
     int filesProcessed = 0;
     IDisposable regLocationChangeHandler;
@@ -64,6 +71,13 @@
         {
             regLocationChangeHandler = NavManager.RegisterLocationChangingHandler(LocationChangingHandler);
         }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var docs = await CustomHttpClient.Get<List<string>>("/chat/getdocuments");
+
+        documents.AddRange(docs);
     }
 
     private async ValueTask LocationChangingHandler(LocationChangingContext arg)
