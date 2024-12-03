@@ -32,7 +32,7 @@
 
                     <pre>
                         @chat.Message
-                                                            </pre>
+                                                                    </pre>
 
                     @if (chat.Sources.Count > 0)
                     {
@@ -115,7 +115,7 @@
         QueryVal = string.Empty;
         await queryInput.FocusAsync();
 
-        chatAssistantResponse.Sources.AddRange(chatMsgDto.Sources);
+        chatAssistantResponse.Sources.AddRange(chatMsgDto?.Sources);
 
         await ScrollBottom();
     }
