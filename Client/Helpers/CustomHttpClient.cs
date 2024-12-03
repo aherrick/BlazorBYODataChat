@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components.WebAssembly.Http;
-using Shared;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -34,6 +33,8 @@ public class CustomHttpClient(HttpClient httpClient, CustomSweetAlertService cus
         if (!response.IsSuccessStatusCode)
         {
             await ShowExceptionAlert(response);
+
+            yield return default;
         }
         else
         {

@@ -1,6 +1,7 @@
-﻿@page "/Ingest"
+﻿@page "/Documents"
 @using System.Net.Http.Headers
 @using System.Text.Json
+@using Blazored.Toast.Services
 @using Client.Models
 @using Client.Helpers
 @using Shared
@@ -8,12 +9,13 @@
 @inject CustomHttpClient CustomHttpClient
 @inject CustomSweetAlertService CustomSweetAlertService
 @inject NavigationManager NavManager
+@inject IToastService toastService
 
 @implements IDisposable
 
-<PageTitle>Ingest</PageTitle>
+<PageTitle>Documents</PageTitle>
 
-<h1>Ingest</h1>
+<h1>Documents</h1>
 
 <p>
     <button type="button" class="btn btn-danger" @onclick=PurgeIndex>
@@ -50,15 +52,37 @@
     }
 }
 
-@foreach (var doc in documents)
+@if (documents.Count > 0)
 {
-    <div class="card">
-        @doc
-    </div>
+
+    <table class="table table-striped table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                <th scope="col">Id</th>
+
+                <th scope="col">Name</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+
+            @foreach (var item in documents)
+            {
+                <tr>
+                    <td>@item.DocumentId</td>
+
+                    <td>@item.Name</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteDocument(item)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 
 @code {
-    List<string> documents = new();
+    List<DocumentDto> documents = new();
     List<File> files = new();
     int filesProcessed = 0;
     IDisposable regLocationChangeHandler;
@@ -73,9 +97,25 @@
         }
     }
 
+    private async Task DeleteDocument(DocumentDto document)
+    {
+        await CustomHttpClient.Post<bool>("/chat/deletedocument", document);
+
+        toastService.ShowSuccess($"Deleted: {document.Name}");
+
+        documents.Remove(document);
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        var docs = await CustomHttpClient.Get<List<string>>("/chat/getdocuments");
+        await LoadDocuments();
+    }
+
+    async Task LoadDocuments()
+    {
+        var docs = await CustomHttpClient.Get<List<DocumentDto>>("/chat/getdocuments");
+
+        documents.Clear();
 
         documents.AddRange(docs);
     }
@@ -128,7 +168,10 @@
 
             using var content = new MultipartFormDataContent();
 
+            var docId = Guid.NewGuid().ToString();
+
             content.Add(fileContent, "File", fileToIngest.Name);
+            content.Add(new StringContent(docId), "Id");
 
             await foreach (var fileProgress in CustomHttpClient.PostStream<FileChunkProgress>("/chat/ingestdata", content))
             {
@@ -137,7 +180,15 @@
             }
 
             filesProcessed++;
+
+            documents.Add(new DocumentDto()
+                {
+                    Name = fileToIngest.Name,
+                    DocumentId = docId
+                });
         }
+
+        await LoadDocuments();
     }
 
     public void Dispose()

@@ -1,3 +1,4 @@
+using Blazored.Toast;
 using Client;
 using Client.Helpers;
 using CurrieTechnologies.Razor.SweetAlert2;
@@ -12,6 +13,8 @@ builder.Services.AddSweetAlert2(options =>
 {
     options.Theme = SweetAlertTheme.Dark;
 });
+
+builder.Services.AddBlazoredToast();
 
 builder.Services.AddScoped<CustomSweetAlertService>();
 

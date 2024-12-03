@@ -1,3 +1,3 @@
 ﻿namespace Server.Models.Dto;
 
-public record FileDataDto(IFormFile File);
+public record FileDataDto(string Id, IFormFile File);
