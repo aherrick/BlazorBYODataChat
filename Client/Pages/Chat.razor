@@ -32,7 +32,7 @@
 
                     <pre>
                         @chat.Message
-                                                                    </pre>
+                        </pre>
 
                     @if (chat.Sources.Count > 0)
                     {
@@ -100,12 +100,12 @@
 
         await foreach (var chatResponse in CustomHttpClient.PostStream<ChatMsgDto>("/chat/StreamMemorySearch", httpContent))
         {
-            if (chatResponse?.Message?.Length > 0)
+            if (chatResponse == null || chatResponse?.Message?.Length > 0)
             {
                 isQuerying = false;
             }
 
-            chatMsgDto = chatResponse;
+            chatMsgDto = chatResponse ?? new ChatMsgDto();
 
             chatAssistantResponse.Message += chatMsgDto.Message;
 
@@ -115,7 +115,7 @@
         QueryVal = string.Empty;
         await queryInput.FocusAsync();
 
-        chatAssistantResponse.Sources.AddRange(chatMsgDto?.Sources);
+        chatAssistantResponse.Sources.AddRange(chatMsgDto.Sources);
 
         await ScrollBottom();
     }
