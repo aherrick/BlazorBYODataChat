@@ -142,6 +142,8 @@
     {
         await CustomHttpClient.Post<bool>("/chat/purgeindex", null);
 
+        documents.Clear();
+
         await CustomSweetAlertService.Success("Purged Index");
     }
 
